@@ -78,11 +78,7 @@ pub fn main() {
         canvas.clear();
 
         // ==== novelty searchの各世代の制御処理 ====
-        // println!("\nGeneration {}", _generation);
-        // println!("Archive size: {}", archive.len());
-        // 世代数カウンタを進める
-        // _generation += 1;
-
+        _generation += 1;
         // === 各個体について新規性の評価 === //
         // scored_population: Vec<(agent, novelty_score)>
         scored_population = evaluate_novelty(&population, &mut archive, k, threshold);
@@ -185,23 +181,38 @@ pub fn main() {
         // ==== sdl2 の描画処理 ====
         // Windowのサイズを取得
         let (width, height) = canvas.output_size().unwrap();
+        // x軸とy軸の描画 (画面中央を原点とする)
+        canvas.set_draw_color(Color::RGB(70, 70, 70));
+        // x軸
+        canvas
+            .draw_line(
+                (0_i32, (height as i32) / 2 + cam_y as i32),
+                (width as i32, (height as i32) / 2 + cam_y as i32),
+            )
+            .unwrap();
+        // y軸
+        canvas
+            .draw_line(
+                ((width as i32) / 2 + cam_x as i32, 0_i32),
+                ((width as i32) / 2 + cam_x as i32, height as i32),
+            )
+            .unwrap();
         // 各個体を画面に描画 (archiveの各点を赤色の小さな四角で表示)
         // x: width/2, y: height/2 を中心座標とする
         for point in &archive {
             let x = (point[0] * 10.0) as i32 + width as i32 / 2 + cam_x as i32;
             let y = (point[1] * 10.0) as i32 + height as i32 / 2 + cam_y as i32;
             let rect = Rect::new(x, y, 1, 1);
-            canvas.set_draw_color(Color::RGB(255, 0, 0));
+            canvas.set_draw_color(Color::RGB(255, 0, 255));
             canvas.fill_rect(rect).unwrap();
         }
-
         // 各個体を画面に描画 (populationの各点を緑色の小さな四角で表示)
         // x: width/2, y: height/2 を中心座標とする
         for agent in &population {
             let x = (agent[0] * 10.0) as i32 + width as i32 / 2 + cam_x as i32;
             let y = (agent[1] * 10.0) as i32 + height as i32 / 2 + cam_y as i32;
             let rect = Rect::new(x, y, 1, 1);
-            canvas.set_draw_color(Color::RGB(0, 255, 0));
+            canvas.set_draw_color(Color::RGB(57, 255, 20));
             canvas.fill_rect(rect).unwrap();
         }
 
