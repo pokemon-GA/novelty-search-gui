@@ -34,8 +34,9 @@ pub fn main() {
     let mut vel_x: f64 = 0.0; // カメラの速度 x方向
     let mut vel_y: f64 = 0.0; // カメラの速度 y方向
     let accel: f64 = 700.0; // 加速度
-    let damping: f64 = 0.86; // 減衰率
+    let damping_per_sec: f64 = 5.0; // 減衰率
     let max_speed: f64 = 800.0; // 最大速度
+    let mut decay: f64; // 減衰計算用
     let mut last_instant = Instant::now(); // 前回のフレーム時間計測用
 
     // novelty searchの初期化
@@ -160,8 +161,9 @@ pub fn main() {
             || keyboard_state.is_scancode_pressed(Scancode::A)
             || keyboard_state.is_scancode_pressed(Scancode::D))
         {
-            vel_x *= damping;
-            vel_y *= damping;
+            decay = (-damping_per_sec * dt).exp();
+            vel_x *= decay;
+            vel_y *= decay;
         }
         // 速度制限
         if vel_x > max_speed {
