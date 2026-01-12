@@ -7,7 +7,9 @@ use sdl2::rect::Rect;
 use std::time::Duration;
 use std::time::Instant;
 
+mod gui;
 mod novelty;
+use crate::gui::world_to_screen;
 use crate::novelty::{evaluate_novelty, gen_population, replenish_novelty, select_novelty};
 
 pub fn main() {
@@ -28,16 +30,24 @@ pub fn main() {
         .unwrap();
     let mut canvas = window.into_canvas().build().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
-    // カメラの初期化
+    // ==== カメラの初期化 ====
+    let mut last_instant = Instant::now(); // 前回のフレーム時間計測用
+    // カメラの移動に関して
     let mut cam_x: f64 = 0.0; // カメラの位置 x方向
     let mut cam_y: f64 = 0.0; // カメラの位置 y方向
     let mut vel_x: f64 = 0.0; // カメラの速度 x方向
     let mut vel_y: f64 = 0.0; // カメラの速度 y方向
     let accel: f64 = 700.0; // 加速度
-    let damping_per_sec: f64 = 5.0; // 減衰率
-    let max_speed: f64 = 800.0; // 最大速度
+    let damping_per_sec: f64 = 14.0; // 減衰率
+    let max_speed: f64 = 50.0; // 最大速度
     let mut decay: f64; // 減衰計算用
-    let mut last_instant = Instant::now(); // 前回のフレーム時間計測用
+    // カメラの拡大、縮小に関して
+    let mut zoom: f64 = 10.0; // カメラのズーム率
+    let mut zoom_vel: f64 = 0.0; // カメラのズーム速度
+    let zoom_accel: f64 = 12.0; // カメラのズーム加速度
+    let zoom_damping_per_sec: f64 = 14.0; // カメラのズーム減衰率
+    let zoom_max_speed: f64 = 8.0; // カメラのズーム最大速度
+    let mut zoom_decay: f64; // カメラのズーム減衰計算用
 
     // novelty searchの初期化
     let mut _generation: usize = 0; // 世代数カウンタ
@@ -129,20 +139,49 @@ pub fn main() {
         let dt = current_instant.duration_since(last_instant).as_secs_f64();
         last_instant = current_instant;
 
-        // カメラの移動速度の更新
+        // === カメラのズーム速度の更新 ===
+        let zoom_keyboard_state = event_pump.keyboard_state();
+        if zoom_keyboard_state.is_scancode_pressed(Scancode::Q) {
+            zoom_vel -= zoom_accel * dt;
+        }
+        if zoom_keyboard_state.is_scancode_pressed(Scancode::E) {
+            zoom_vel += zoom_accel * dt;
+        }
+        // 減衰力の適用
+        if !(zoom_keyboard_state.is_scancode_pressed(Scancode::Q)
+            || zoom_keyboard_state.is_scancode_pressed(Scancode::E))
+        {
+            zoom_decay = (-zoom_damping_per_sec * dt).exp();
+            zoom_vel *= zoom_decay;
+        }
+        // 速度制限
+        if zoom_vel > zoom_max_speed {
+            zoom_vel = zoom_max_speed;
+        }
+        if zoom_vel < -zoom_max_speed {
+            zoom_vel = -zoom_max_speed;
+        }
+        // ズーム率更新
+        zoom += zoom_vel * dt;
+        if zoom < 1.0 {
+            zoom = 1.0;
+            zoom_vel = 0.0;
+        }
+
+        // === カメラの移動速度の更新 ===
         let keyboard_state = event_pump.keyboard_state();
         // キー入力による加速度の適用
         if keyboard_state.is_scancode_pressed(Scancode::W) {
-            vel_y += accel * dt;
-        }
-        if keyboard_state.is_scancode_pressed(Scancode::S) {
             vel_y -= accel * dt;
         }
+        if keyboard_state.is_scancode_pressed(Scancode::S) {
+            vel_y += accel * dt;
+        }
         if keyboard_state.is_scancode_pressed(Scancode::A) {
-            vel_x += accel * dt;
+            vel_x -= accel * dt;
         }
         if keyboard_state.is_scancode_pressed(Scancode::D) {
-            vel_x -= accel * dt;
+            vel_x += accel * dt;
         }
         // 減衰力の適用
         if !(keyboard_state.is_scancode_pressed(Scancode::W)
@@ -177,39 +216,38 @@ pub fn main() {
         canvas.clear();
         // Windowのサイズを取得
         let (width, height) = canvas.output_size().unwrap();
+        let center_x = (width as f64) / 2.0;
+        let center_y = (height as f64) / 2.0;
+        // world座標
+        let world_left = (0.0 - center_x) / zoom + cam_x;
+        let world_right = (width as f64 - center_x) / zoom + cam_x;
+        let world_top = (0.0 - center_y) / zoom + cam_y;
+        let world_bottom = (height as f64 - center_y) / zoom + cam_y;
         // x軸とy軸の描画 (画面中央を原点とする)
         canvas.set_draw_color(Color::RGB(70, 70, 70));
         // x軸
-        canvas
-            .draw_line(
-                (0_i32, (height as i32) / 2 + cam_y as i32),
-                (width as i32, (height as i32) / 2 + cam_y as i32),
-            )
-            .unwrap();
+        let (x1, y1) = world_to_screen(world_left, 0.0, cam_x, cam_y, zoom, center_x, center_y);
+        let (x2, y2) = world_to_screen(world_right, 0.0, cam_x, cam_y, zoom, center_x, center_y);
+        canvas.draw_line((x1, y1), (x2, y2)).unwrap();
         // y軸
-        canvas
-            .draw_line(
-                ((width as i32) / 2 + cam_x as i32, 0_i32),
-                ((width as i32) / 2 + cam_x as i32, height as i32),
-            )
-            .unwrap();
+        let (x3, y3) = world_to_screen(0.0, world_top, cam_x, cam_y, zoom, center_x, center_y);
+        let (x4, y4) = world_to_screen(0.0, world_bottom, cam_x, cam_y, zoom, center_x, center_y);
+        canvas.draw_line((x3, y3), (x4, y4)).unwrap();
         // 各個体を画面に描画 (archiveの各点を赤色の小さな四角で表示)
+        // 計算式: screen = (world − camera) × zoom + center
         // x: width/2, y: height/2 を中心座標とする
-        for point in &archive {
-            let x = (point[0] * 10.0) as i32 + width as i32 / 2 + cam_x as i32;
-            let y = (point[1] * 10.0) as i32 + height as i32 / 2 + cam_y as i32;
-            let rect = Rect::new(x, y, 1, 1);
+        for p in &archive {
+            let (x, y) = world_to_screen(p[0], p[1], cam_x, cam_y, zoom, center_x, center_y);
             canvas.set_draw_color(Color::RGB(255, 0, 255));
-            canvas.fill_rect(rect).unwrap();
+            canvas.fill_rect(Rect::new(x, y, 2, 2)).unwrap();
         }
         // 各個体を画面に描画 (populationの各点を緑色の小さな四角で表示)
         // x: width/2, y: height/2 を中心座標とする
         for agent in &population {
-            let x = (agent[0] * 10.0) as i32 + width as i32 / 2 + cam_x as i32;
-            let y = (agent[1] * 10.0) as i32 + height as i32 / 2 + cam_y as i32;
-            let rect = Rect::new(x, y, 1, 1);
-            canvas.set_draw_color(Color::RGB(57, 255, 20));
-            canvas.fill_rect(rect).unwrap();
+            let (x, y) =
+                world_to_screen(agent[0], agent[1], cam_x, cam_y, zoom, center_x, center_y);
+            canvas.set_draw_color(Color::RGB(0, 255, 0));
+            canvas.fill_rect(Rect::new(x, y, 2, 2)).unwrap();
         }
 
         // 画面に表示
