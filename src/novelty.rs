@@ -125,7 +125,7 @@ pub fn evaluate_novelty(
     - 新規性スコアに基づいて、次世代に進む個体を選択する。
  */
 pub fn select_novelty(scored_population: &[(Vec<f64>, f64)], alive_agents: usize) -> Vec<Vec<f64>> {
-    // alive_agents文だけ新規性スコアの高い個体を選択
+    // alive_agents 分だけ新規性スコアの高い個体を選択
     scored_population
         .iter()
         .take(alive_agents)
