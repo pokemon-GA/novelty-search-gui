@@ -73,20 +73,14 @@ pub fn main() {
         gen_population(agents, dimensions, random_min, random_max, &mut rng_init);
 
     'running: loop {
-        // 背景
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        canvas.clear();
-
         // ==== novelty searchの各世代の制御処理 ====
         _generation += 1;
         // === 各個体について新規性の評価 === //
         // scored_population: Vec<(agent, novelty_score)>
         scored_population = evaluate_novelty(&population, &mut archive, k, threshold);
-
         // === 選択 (エリート選択) === //
         // remain_agents分だけ新規性スコアの高い個体を選択
         selected_population = select_novelty(&scored_population, remain_agents);
-
         // === 交叉と突然変異 === //
         next_population = replenish_novelty(
             &selected_population,
@@ -96,8 +90,7 @@ pub fn main() {
             noise_max,
             &mut rng_mut,
         );
-
-        // 次世代個体群を更新
+        // === 次世代個体群を更新 === //
         population.clear();
         population.extend(selected_population);
         population.extend(next_population);
@@ -179,6 +172,9 @@ pub fn main() {
         cam_y += vel_y * dt;
 
         // ==== sdl2 の描画処理 ====
+        // 背景
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        canvas.clear();
         // Windowのサイズを取得
         let (width, height) = canvas.output_size().unwrap();
         // x軸とy軸の描画 (画面中央を原点とする)
