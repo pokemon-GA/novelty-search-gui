@@ -171,23 +171,35 @@ pub fn main() {
         // === カメラの移動速度の更新 ===
         let keyboard_state = event_pump.keyboard_state();
         // キー入力による加速度の適用
-        if keyboard_state.is_scancode_pressed(Scancode::W) {
+        if keyboard_state.is_scancode_pressed(Scancode::W)
+            || keyboard_state.is_scancode_pressed(Scancode::K)
+        {
             vel_y -= accel * dt;
         }
-        if keyboard_state.is_scancode_pressed(Scancode::S) {
+        if keyboard_state.is_scancode_pressed(Scancode::S)
+            || keyboard_state.is_scancode_pressed(Scancode::J)
+        {
             vel_y += accel * dt;
         }
-        if keyboard_state.is_scancode_pressed(Scancode::A) {
+        if keyboard_state.is_scancode_pressed(Scancode::A)
+            || keyboard_state.is_scancode_pressed(Scancode::H)
+        {
             vel_x -= accel * dt;
         }
-        if keyboard_state.is_scancode_pressed(Scancode::D) {
+        if keyboard_state.is_scancode_pressed(Scancode::D)
+            || keyboard_state.is_scancode_pressed(Scancode::L)
+        {
             vel_x += accel * dt;
         }
         // 減衰力の適用
         if !(keyboard_state.is_scancode_pressed(Scancode::W)
+            || keyboard_state.is_scancode_pressed(Scancode::K)
             || keyboard_state.is_scancode_pressed(Scancode::S)
+            || keyboard_state.is_scancode_pressed(Scancode::J)
             || keyboard_state.is_scancode_pressed(Scancode::A)
-            || keyboard_state.is_scancode_pressed(Scancode::D))
+            || keyboard_state.is_scancode_pressed(Scancode::H)
+            || keyboard_state.is_scancode_pressed(Scancode::D)
+            || keyboard_state.is_scancode_pressed(Scancode::L))
         {
             decay = (-damping_per_sec * dt).exp();
             vel_x *= decay;
